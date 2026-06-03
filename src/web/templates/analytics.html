@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Analytics - Expense Tracker{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Spending Overview</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="value" id="totalExpenses">-</div><div class="label">Total Expenses</div></div>
+    <div class="stat"><div class="value" id="totalAmount">-</div><div class="label">Total Spent</div></div>
+    <div class="stat"><div class="value" id="avgAmount">-</div><div class="label">Average</div></div>
+    <div class="stat"><div class="value" id="monthsTracked">-</div><div class="label">Months Tracked</div></div>
+  </div>
+</div>
+<div class="card">
+  <h2>Category Breakdown</h2>
+  <table>
+    <thead><tr><th>Category</th><th>Count</th><th>Total</th><th>Average</th><th>Budget</th></tr></thead>
+    <tbody id="catTable"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+  </table>
+</div>
+<div class="card">
+  <h2>Monthly Trend</h2>
+  <div id="monthlyChart"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const SID=localStorage.getItem("staff_id");
+async function loadAnalytics(){
+  const data=await api("/api/analytics/stats?staff_id="+SID);
+  document.getElementById("totalExpenses").textContent=data.total.total_expenses||0;
+  document.getElementById("totalAmount").textContent="$"+(data.total.total_amount||0).toFixed(2);
+  document.getElementById("avgAmount").textContent="$"+(data.total.avg_amount||0).toFixed(2);
+  document.getElementById("monthsTracked").textContent=data.monthly.length||0;
+  const cats=data.categories||[];
+  const tbody=document.getElementById("catTable");
+  if(!cats.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No data</td></tr>';}
+  else{tbody.innerHTML=cats.map(c=>'<tr><td>'+c.category+'</td><td>'+c.count+'</td><td>$'+Number(c.total).toFixed(2)+'</td><td>$'+(c.total/c.count).toFixed(2)+'</td><td>-</td></tr>').join("");}
+  const months=data.monthly||[];
+  const chart=document.getElementById("monthlyChart");
+  if(!months.length){chart.innerHTML='<p class="empty">No monthly data</p>';return;}
+  const maxTotal=Math.max(...months.map(m=>m.total));
+  chart.innerHTML=months.map(m=>{
+    const pct=maxTotal?Math.round(m.total/maxTotal*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><span style="width:80px;font-size:.85rem">'+m.month+'</span><div style="flex:1;height:24px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--primary);border-radius:4px"></div></div><span style="font-size:.8rem;color:var(--muted);width:70px;text-align:right">$'+m.total.toFixed(0)+'</span></div>';
+  }).join("");
+}
+loadAnalytics();
+</script>
+{% endblock %}

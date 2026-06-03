@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Expense Tracker{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Overview</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="value" id="totalExpenses">-</div><div class="label">Total Expenses</div></div>
+    <div class="stat"><div class="value" id="totalAmount">-</div><div class="label">Total Spent</div></div>
+    <div class="stat"><div class="value" id="avgAmount">-</div><div class="label">Average</div></div>
+    <div class="stat"><div class="value" id="topCategory">-</div><div class="label">Top Category</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Recent Expenses</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Description</th></tr></thead>
+    <tbody id="recentTable"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Category Breakdown</h2>
+  <div id="categoryChart"></div>
+</div>
+
+<div class="card">
+  <h2>Gamification</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="value" id="level">1</div><div class="label">Level</div></div>
+    <div class="stat"><div class="value" id="xp">0</div><div class="label">XP</div></div>
+    <div class="stat"><div class="value" id="streak">0</div><div class="label">Streak (days)</div></div>
+    <div class="stat"><div class="value" id="badges">0</div><div class="label">Badges</div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const SID=localStorage.getItem("staff_id");
+async function loadDashboard(){
+  try{
+    const[overview,gamification,expenses]=await Promise.all([
+      api("/api/analytics/overview?staff_id="+SID),
+      api("/api/gamification/stats/"+SID).catch(()=>({xp:0,level:1,current_streak:0,total_achievements:0})),
+      api("/api/expenses?staff_id="+SID+"&limit=10")
+    ]);
+    const t=overview.overall||{};
+    document.getElementById("totalExpenses").textContent=t.total_expenses||0;
+    document.getElementById("totalAmount").textContent="$"+(t.total_amount||0).toFixed(2);
+    document.getElementById("avgAmount").textContent="$"+(t.avg_amount||0).toFixed(2);
+    const cats=overview.categories||[];
+    if(cats.length>0){
+      document.getElementById("topCategory").textContent=cats[0].category;
+    }
+    const tbody=document.getElementById("recentTable");
+    if(!expenses||expenses.length===0){
+      tbody.innerHTML='<tr><td colspan="4" class="empty">No expenses yet</td></tr>';
+    }else{
+      tbody.innerHTML=expenses.map(e=>'<tr><td>'+(e.expense_date||"")+'</td><td>'+e.category+'</td><td>$'+Number(e.amount).toFixed(2)+'</td><td>'+(e.description||"")+'</td></tr>').join("");
+    }
+    const catDiv=document.getElementById("categoryChart");
+    if(cats.length>0){
+      const totalAmt=t.total_amount||1;
+      catDiv.innerHTML=cats.map(c=>{
+        const pct=Math.round(c.total/totalAmt*100);
+        return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><span style="width:120px;font-size:.85rem">'+c.category+'</span><div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--primary);border-radius:4px"></div></div><span style="font-size:.8rem;color:var(--muted);width:50px;text-align:right">'+pct+'%</span></div>';
+      }).join("");
+    }else{
+      catDiv.innerHTML='<p class="empty">No data yet</p>';
+    }
+    document.getElementById("level").textContent=gamification.level||1;
+    document.getElementById("xp").textContent=gamification.xp||0;
+    document.getElementById("streak").textContent=gamification.current_streak||0;
+    document.getElementById("badges").textContent=gamification.total_achievements||0;
+  }catch(e){console.error("Dashboard load error:",e);}
+}
+loadDashboard();
+</script>
+{% endblock %}

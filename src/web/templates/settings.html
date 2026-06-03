@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Settings - Expense Tracker{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Currency</h2>
+  <div class="form-group">
+    <select id="currencySelect" onchange="setCurrency()" style="max-width:300px">
+      <option value="USD">USD - US Dollar</option>
+      <option value="EUR">EUR - Euro</option>
+      <option value="GBP">GBP - British Pound</option>
+      <option value="KES">KES - Kenyan Shilling</option>
+      <option value="NGN">NGN - Nigerian Naira</option>
+      <option value="GHS">GHS - Ghana Cedis</option>
+      <option value="ZAR">ZAR - South African Rand</option>
+      <option value="UGX">UGX - Ugandan Shilling</option>
+      <option value="TZS">TZS - Tanzanian Shilling</option>
+      <option value="INR">INR - Indian Rupee</option>
+      <option value="CAD">CAD - Canadian Dollar</option>
+      <option value="AUD">AUD - Australian Dollar</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Theme</h2>
+  <div class="form-group">
+    <select id="themeSelect" onchange="setTheme()" style="max-width:300px">
+      <option value="default">Default</option>
+      <option value="dark">Dark</option>
+      <option value="ocean">Ocean</option>
+      <option value="sunset">Sunset</option>
+      <option value="forest">Forest</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Payment Methods</h2>
+  <div id="paymentMethods"></div>
+  <div style="margin-top:12px;display:flex;gap:8px">
+    <input type="text" id="newPmName" placeholder="Name" style="padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:.85rem">
+    <button class="btn btn-primary btn-sm" onclick="addPaymentMethod()">Add</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Monthly Budget</h2>
+  <div id="budgetList"></div>
+</div>
+
+<div class="card">
+  <h2>Backup / Restore</h2>
+  <div style="display:flex;gap:8px">
+    <a href="/api/reports/monthly" class="btn btn-primary btn-sm" target="_blank">Export Report</a>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadSettings(){
+  const[curr,theme,pms,budgets]=await Promise.all([
+    api("/api/settings/currency"),api("/api/settings/theme"),
+    api("/api/settings/payment-methods"),api("/api/settings/budgets")
+  ]);
+  document.getElementById("currencySelect").value=curr.currency||"USD";
+  document.getElementById("themeSelect").value=theme.theme||"default";
+  renderPaymentMethods(pms);renderBudgets(budgets);
+}
+function renderPaymentMethods(pms){
+  const d=document.getElementById("paymentMethods");
+  if(!pms.length){d.innerHTML='<p style="color:var(--muted);font-size:.85rem">No payment methods</p>';return;}
+  d.innerHTML=pms.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span>'+p.name+' <span style="color:var(--muted);font-size:.8rem">'+p.type+'</span></span><button class="btn btn-danger btn-sm" onclick="deletePm('+p.id+')">x</button></div>').join("");
+}
+function renderBudgets(budgets){
+  const d=document.getElementById("budgetList");
+  d.innerHTML=budgets.map(b=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span>'+b.name+'</span><span>$'+Number(b.budget).toFixed(2)+'</span></div>').join("");
+}
+async function setCurrency(){await api("/api/settings/currency",{method:"PUT",body:JSON.stringify({currency:document.getElementById("currencySelect").value})});toast("Currency updated");}
+async function setTheme(){await api("/api/settings/theme",{method:"PUT",body:JSON.stringify({theme:document.getElementById("themeSelect").value})});toast("Theme updated");}
+async function addPaymentMethod(){
+  const name=document.getElementById("newPmName").value.trim();
+  if(!name)return;
+  await api("/api/settings/payment-methods",{method:"POST",body:JSON.stringify({name:name,type:"other"})});
+  document.getElementById("newPmName").value="";toast("Payment method added");loadSettings();
+}
+async function deletePm(id){await api("/api/settings/payment-methods/"+id,{method:"DELETE"});toast("Deleted");loadSettings();}
+loadSettings();
+</script>
+{% endblock %}

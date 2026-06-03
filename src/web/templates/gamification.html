@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Gamification - Expense Tracker{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Your Stats</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="value" id="level">1</div><div class="label">Level</div></div>
+    <div class="stat"><div class="value" id="xp">0</div><div class="label">XP</div></div>
+    <div class="stat"><div class="value" id="streak">0</div><div class="label">Streak</div></div>
+    <div class="stat"><div class="value" id="expenses">0</div><div class="label">Expenses</div></div>
+  </div>
+</div>
+<div class="card">
+  <h2>Achievements</h2>
+  <div id="achievements"></div>
+</div>
+<div class="card">
+  <h2>Leaderboard</h2>
+  <table>
+    <thead><tr><th>#</th><th>Name</th><th>Level</th><th>XP</th><th>Streak</th></tr></thead>
+    <tbody id="leaderboard"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+  </table>
+</div>
+<div class="card">
+  <h2>Challenges</h2>
+  <div id="challenges"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const SID=localStorage.getItem("staff_id");
+async function loadGamification(){
+  const[stats,earned,leaderboard,challenges]=await Promise.all([
+    api("/api/gamification/stats/"+SID),
+    api("/api/gamification/achievements/"+SID).catch(()=>[]),
+    api("/api/gamification/leaderboard").catch(()=>[]),
+    api("/api/gamification/challenges").catch(()=>[])
+  ]);
+  document.getElementById("level").textContent=stats.level||1;
+  document.getElementById("xp").textContent=stats.xp||0;
+  document.getElementById("streak").textContent=stats.current_streak||0;
+  document.getElementById("expenses").textContent=stats.total_expenses||0;
+  const achDiv=document.getElementById("achievements");
+  if(!earned.length){achDiv.innerHTML='<p class="empty">No achievements yet</p>';}
+  else{achDiv.innerHTML=earned.map(a=>'<div style="display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem">'+a.icon+'</span><div><strong>'+a.name+'</strong><br><span style="color:var(--muted);font-size:.85rem">'+a.description+'</span></div></div>').join("");}
+  const lb=document.getElementById("leaderboard");
+  if(!leaderboard.length){lb.innerHTML='<tr><td colspan="5" class="empty">No data</td></tr>';}
+  else{lb.innerHTML=leaderboard.map((l,i)=>'<tr><td>'+(i+1)+'</td><td>'+l.name+'</td><td>'+(l.level||1)+'</td><td>'+(l.xp||0)+'</td><td>'+(l.streak||0)+'</td></tr>').join("");}
+  const chDiv=document.getElementById("challenges");
+  if(!challenges.length){chDiv.innerHTML='<p class="empty">No active challenges</p>';}
+  else{chDiv.innerHTML=challenges.map(c=>'<div style="padding:12px 0;border-bottom:1px solid var(--border)"><strong>'+c.title+'</strong> <span style="color:var(--muted);font-size:.85rem">'+c.description+'</span><br><span style="font-size:.8rem">Goal: '+c.goal_type+' ('+c.goal_value+') | Reward: '+c.xp_reward+' XP</span></div>').join("");}
+}
+loadGamification();
+</script>
+{% endblock %}

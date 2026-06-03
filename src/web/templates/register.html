@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register - Expense Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#475569;--text:#f1f5f9;--muted:#94a3b8;--primary:#3b82f6;--primary-hover:#2563eb;--danger:#ef4444;--radius:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:380px;margin:16px}
+.login-box h1{text-align:center;font-size:1.4rem;margin-bottom:8px}
+.login-box .sub{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.form-group input{width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:.95rem}
+.form-group input:focus{outline:none;border-color:var(--primary)}
+.btn{width:100%;padding:12px;border:none;border-radius:var(--radius);background:var(--primary);color:#fff;font-size:1rem;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--primary-hover)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error{color:var(--danger);font-size:.85rem;text-align:center;margin-top:8px;display:none}
+.success{color:var(--success);font-size:.85rem;text-align:center;margin-top:8px;display:none}
+.links{text-align:center;margin-top:16px;font-size:.85rem}
+.links a{color:var(--primary)}
+.pw-hint{font-size:.75rem;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="login-box">
+  <h1>Create Account</h1>
+  <p class="sub">Register as a new staff member</p>
+  <form id="regForm">
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="name" required placeholder="Your full name">
+    </div>
+    <div class="form-group">
+      <label>Department</label>
+      <input type="text" id="dept" placeholder="e.g. Engineering">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@company.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" required placeholder="Min 8 chars, uppercase, lowercase, digit" minlength="8">
+      <div class="pw-hint">Must contain uppercase, lowercase, and a number</div>
+    </div>
+    <button type="submit" class="btn" id="regBtn">Create Account</button>
+    <div class="error" id="error"></div>
+    <div class="success" id="success"></div>
+  </form>
+  <div class="links">
+    Already have an account? <a href="/login">Sign in</a>
+  </div>
+</div>
+<script>
+document.getElementById("regForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const errEl=document.getElementById("error");
+  const succEl=document.getElementById("success");
+  errEl.style.display="none";succEl.style.display="none";
+  const btn=document.getElementById("regBtn");
+  btn.disabled=true;btn.textContent="Creating account...";
+  try{
+    const r=await fetch("/api/auth/register",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        name:document.getElementById("name").value,
+        department:document.getElementById("dept").value,
+        email:document.getElementById("email").value,
+        password:document.getElementById("password").value
+      })
+    });
+    const data=await r.json();
+    if(!r.ok){
+      let msg="Registration failed";
+      if(data.detail){
+        if(typeof data.detail==="object"&&data.detail.errors){
+          msg=data.detail.errors.join(", ");
+        }else if(typeof data.detail==="string"){
+          msg=data.detail;
+        }
+      }
+      errEl.textContent=msg;errEl.style.display="block";
+      return;
+    }
+    localStorage.setItem("token",data.access_token);
+    localStorage.setItem("refresh",data.refresh_token);
+    localStorage.setItem("staff_id",data.staff_id);
+    localStorage.setItem("staff_name",data.name);
+    localStorage.setItem("role",data.role);
+    window.location.href="/dashboard";
+  }catch(err){errEl.textContent="Connection error";errEl.style.display="block";}
+  finally{btn.disabled=false;btn.textContent="Create Account";}
+});
+</script>
+</body>
+</html>

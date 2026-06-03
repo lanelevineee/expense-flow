@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Staff - Expense Tracker{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2 style="margin:0">Staff Members</h2>
+    <button class="btn btn-primary btn-sm" onclick="showAdd()" id="addStaffBtn">+ Add Staff</button>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Email</th><th id="actionsHead"></th></tr></thead>
+    <tbody id="staffTable"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+  </table>
+</div>
+<div class="card" id="addForm" style="display:none">
+  <h2>Add Staff Member</h2>
+  <form onsubmit="saveStaff(event)">
+    <div class="form-group"><label>Name</label><input type="text" id="sName" required></div>
+    <div class="form-group"><label>Department</label><input type="text" id="sDept"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="sEmail"></div>
+    <div style="display:flex;gap:8px">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn" style="background:var(--surface2);color:var(--text)" onclick="hideAdd()">Cancel</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+var admin=isAdmin();
+if(!admin){
+  var b=document.getElementById("addStaffBtn");if(b)b.style.display="none";
+  var h=document.getElementById("actionsHead");if(h)h.style.display="none";
+}
+async function loadStaff(){
+  const data=await api("/api/staff");
+  const tbody=document.getElementById("staffTable");
+  if(!data.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No staff</td></tr>';return;}
+  tbody.innerHTML=data.map(s=>'<tr><td>'+s.id+'</td><td>'+s.name+'</td><td>'+(s.department||"-")+'</td><td>'+(s.email||"-")+'</td>'+(admin?'<td><button class="btn btn-danger btn-sm" onclick="deleteStaff('+s.id+')">x</button></td>':'<td></td>')+'</tr>').join("");
+}
+function showAdd(){document.getElementById("addForm").style.display="block";}
+function hideAdd(){document.getElementById("addForm").style.display="none";}
+async function saveStaff(e){
+  e.preventDefault();
+  await api("/api/staff",{method:"POST",body:JSON.stringify({
+    name:document.getElementById("sName").value,
+    department:document.getElementById("sDept").value,
+    email:document.getElementById("sEmail").value
+  })});
+  toast("Staff added");hideAdd();loadStaff();
+}
+async function deleteStaff(id){
+  if(!confirm("Delete this staff member and all their expenses?"))return;
+  await api("/api/staff/"+id,{method:"DELETE"});
+  toast("Deleted");loadStaff();
+}
+loadStaff();
+</script>
+{% endblock %}

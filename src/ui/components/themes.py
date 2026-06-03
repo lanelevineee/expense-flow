@@ -1,0 +1,61 @@
+THEMES = {
+    "default": {
+        "primary": "cyan",
+        "secondary": "blue",
+        "accent": "yellow",
+        "success": "green",
+        "danger": "red",
+        "info": "magenta",
+        "border_style": "cyan",
+        "panel_style": "cyan",
+        "table_border": "blue",
+    },
+    "dark": {
+        "primary": "green",
+        "secondary": "bright_blue",
+        "accent": "bright_yellow",
+        "success": "bright_green",
+        "danger": "bright_red",
+        "info": "bright_magenta",
+        "border_style": "green",
+        "panel_style": "green",
+        "table_border": "bright_blue",
+    },
+    "ocean": {
+        "primary": "blue",
+        "secondary": "cyan",
+        "accent": "white",
+        "success": "green",
+        "danger": "red",
+        "info": "yellow",
+        "border_style": "blue",
+        "panel_style": "cyan",
+        "table_border": "blue",
+    },
+    "sunset": {
+        "primary": "magenta",
+        "secondary": "red",
+        "accent": "yellow",
+        "success": "green",
+        "danger": "bright_red",
+        "info": "cyan",
+        "border_style": "magenta",
+        "panel_style": "red",
+        "table_border": "magenta",
+    },
+    "forest": {
+        "primary": "green",
+        "secondary": "bright_green",
+        "accent": "yellow",
+        "success": "bright_green",
+        "danger": "red",
+        "info": "cyan",
+        "border_style": "green",
+        "panel_style": "green",
+        "table_border": "bright_green",
+    },
+}
+
+
+def get_theme(name="default"):
+    return THEMES.get(name, THEMES["default"])
