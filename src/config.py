@@ -79,3 +79,9 @@ class ConfigManager:
     def set(self, key, value):
         self._data[key] = value
         self.save()
+
+    def is_env_overridden(self, key) -> bool:
+        env_var = _ENV_MAP.get(key)
+        if not env_var:
+            return False
+        return os.getenv(env_var) is not None

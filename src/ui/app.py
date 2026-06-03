@@ -38,6 +38,7 @@ from src.ui.screens.analytics import AnalyticsScreen
 from src.ui.screens.insights import InsightsScreen
 from src.ui.screens.reports import ReportsScreen
 from src.ui.screens.settings import SettingsScreen
+from src.ui.screens.auth import AuthScreen
 
 
 class App:
@@ -114,7 +115,8 @@ class App:
         }
 
         self._active_staff_id: Optional[int] = self.config.get("active_staff_id")
-        self._resolve_initial_staff()
+        self._auth_user: Optional[dict] = None
+        self._auth_screen = AuthScreen(self.staff_repo, self.config)
 
     def _resolve_initial_staff(self):
         if self._active_staff_id:
@@ -175,7 +177,15 @@ class App:
         return 0
 
     def _show_active_staff_banner(self):
-        if self._active_staff_id:
+        if self._auth_user:
+            console.print(
+                Panel(
+                    f"[bold cyan]Logged in: {self._auth_user['name']}[/bold cyan]  "
+                    f"[dim]({self._auth_user['role']})[/dim]",
+                    border_style="cyan",
+                )
+            )
+        elif self._active_staff_id:
             staff = self.staff_repo.get_by_id(self._active_staff_id)
             if staff:
                 console.print(
@@ -258,6 +268,14 @@ class App:
         Prompt.ask("\n[dim]Press Enter to continue...[/dim]")
 
     def run(self):
+        self._auth_user = self._auth_screen.show()
+        if not self._auth_user:
+            console.print("\n[bold green]Goodbye![/bold green]")
+            return
+
+        self._active_staff_id = self._auth_user["staff_id"]
+        self.config.set("active_staff_id", self._active_staff_id)
+
         while True:
             console.clear()
             show_logo()

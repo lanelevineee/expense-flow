@@ -19,3 +19,4 @@ htmlcov/
 *.log
 data/
 pgdata/
+.DS_Store

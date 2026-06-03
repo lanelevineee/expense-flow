@@ -59,6 +59,9 @@ class SettingsScreen(BaseScreen):
             default_model = self._config.get("default_model", "openai/gpt-4o-mini")
             mb = self._config.get("monthly_budget")
 
+            or_env = self._config.is_env_overridden("openrouter_api_key")
+            groq_env = self._config.is_env_overridden("groq_api_key")
+
             budget_line = (
                 f"[cyan]Monthly Budget:[/cyan]    ${mb:.2f}"
                 if mb
@@ -69,11 +72,18 @@ class SettingsScreen(BaseScreen):
             currency_line = f"[cyan]Currency:[/cyan]          [yellow]{staff.currency}[/yellow]" if staff else ""
             theme_line = f"[cyan]Theme:[/cyan]              [yellow]{staff.theme}[/yellow]" if staff else ""
 
+            or_key_line = f"[cyan]OpenRouter Key:[/cyan]    {self._mask_key(or_key)}"
+            if or_env:
+                or_key_line += " [dim](from env)[/dim]"
+            groq_key_line = f"[cyan]Groq Key:[/cyan]          {self._mask_key(groq_key)}"
+            if groq_env:
+                groq_key_line += " [dim](from env)[/dim]"
+
             info = Panel(
                 "[bold]Current Configuration[/bold]\n\n"
                 f"[cyan]AI Provider:[/cyan]       [yellow]{provider.upper()}[/yellow]\n"
-                f"[cyan]OpenRouter Key:[/cyan]    {self._mask_key(or_key)}\n"
-                f"[cyan]Groq Key:[/cyan]          {self._mask_key(groq_key)}\n"
+                f"{or_key_line}\n"
+                f"{groq_key_line}\n"
                 f"[cyan]Default Model:[/cyan]     {default_model}\n"
                 f"[cyan]OpenRouter Model:[/cyan]  {or_model}\n"
                 f"[cyan]Groq Model:[/cyan]        {groq_model}\n"
