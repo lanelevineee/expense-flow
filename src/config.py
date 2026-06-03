@@ -50,7 +50,7 @@ class ConfigManager:
     def _load_env(self):
         for key, env_var in _ENV_MAP.items():
             val = os.getenv(env_var)
-            if val is not None:
+            if val is not None and val != "":
                 if key == "smtp_port":
                     try:
                         val = int(val)

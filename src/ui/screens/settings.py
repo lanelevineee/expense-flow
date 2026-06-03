@@ -104,6 +104,8 @@ class SettingsScreen(BaseScreen):
                 "Set Groq Model",
                 "Test API Connection",
                 "Set Monthly Budget",
+                "Set JWT Secret",
+                "Set SMTP Settings",
                 "Delete All Data",
             ]
             if staff:
@@ -167,6 +169,13 @@ class SettingsScreen(BaseScreen):
                 self._config.set("monthly_budget", budget if budget > 0 else None)
                 console.print("[green]Monthly budget set.[/green]")
             elif choice == "8":
+                key = Prompt.ask("-  JWT Secret (random string for token signing)", password=True)
+                if key:
+                    self._config.set("jwt_secret", key.strip())
+                    console.print("[green]JWT secret saved![/green]")
+            elif choice == "9":
+                self._set_smtp()
+            elif choice == "10":
                 if Confirm.ask(
                     "[bold red]Delete ALL data (expenses and staff)?[/bold red]"
                 ):
@@ -176,13 +185,13 @@ class SettingsScreen(BaseScreen):
                             self._staff_repo.delete(s.id)
                         self._config.set("active_staff_id", None)
                         console.print("[green]All data cleared.[/green]")
-            elif choice == "9" and staff:
-                self._set_currency(staff.id)
-            elif choice == "10" and staff:
-                self._set_theme(staff.id)
             elif choice == "11" and staff:
-                self._manage_payment_methods(staff.id)
+                self._set_currency(staff.id)
             elif choice == "12" and staff:
+                self._set_theme(staff.id)
+            elif choice == "13" and staff:
+                self._manage_payment_methods(staff.id)
+            elif choice == "14" and staff:
                 self._backup_restore()
 
             Prompt.ask("\n[dim]Press Enter to continue...[/dim]")
@@ -209,6 +218,22 @@ class SettingsScreen(BaseScreen):
         theme = theme_names[tc - 1]
         self._staff_repo.update(staff_id, theme=theme)
         console.print(f"[green]Theme set to {theme}[/green]")
+
+    def _set_smtp(self):
+        console.clear()
+        show_logo()
+        console.print(Panel("[bold cyan]SMTP Settings (Mailtrap)[/bold cyan]", border_style="cyan"))
+
+        host = Prompt.ask("-  SMTP Host", default=self._config.get("smtp_host", "smtp.mailtrap.io"))
+        port = IntPrompt.ask("-  SMTP Port", default=int(self._config.get("smtp_port", 587)))
+        user = Prompt.ask("-  SMTP User", default=self._config.get("smtp_user", ""))
+        password = Prompt.ask("-  SMTP Password", password=True, default=self._config.get("smtp_password", ""))
+
+        self._config.set("smtp_host", host.strip())
+        self._config.set("smtp_port", port)
+        self._config.set("smtp_user", user.strip())
+        self._config.set("smtp_password", password.strip())
+        console.print("[green]SMTP settings saved![/green]")
 
     def _manage_payment_methods(self, staff_id: int):
         while True:
