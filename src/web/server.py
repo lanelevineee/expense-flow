@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 import logging
 import os
 
@@ -9,6 +9,10 @@ from src.database import DatabaseConnection, init_tables
 from src.auth.middleware import init_auth
 
 logger = logging.getLogger("expense_tracker.web")
+
+FRONTEND_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend", "dist"
+)
 
 
 def create_app() -> FastAPI:
@@ -37,16 +41,7 @@ def create_app() -> FastAPI:
     gami_service = GamificationService(gami_repo)
     gami_service.ensure_seeded()
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    templates_dir = os.path.join(base_dir, "templates")
-    static_dir = os.path.join(base_dir, "static")
-
-    if os.path.isdir(templates_dir):
-        app.state.templates = Jinja2Templates(directory=templates_dir)
-    if os.path.isdir(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-    from src.web.routes.pages import router as pages_router
+    # Mount API routers
     from src.web.routes.auth import router as auth_router
     from src.web.routes.staff import router as staff_router
     from src.web.routes.expenses import router as expenses_router
@@ -58,7 +53,6 @@ def create_app() -> FastAPI:
     from src.web.routes.reports import router as reports_router
     from src.web.routes.sync import router as sync_router
 
-    app.include_router(pages_router, tags=["Pages"])
     app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
     app.include_router(staff_router, prefix="/api/staff", tags=["Staff"])
     app.include_router(expenses_router, prefix="/api/expenses", tags=["Expenses"])
@@ -73,6 +67,34 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health():
         return {"status": "ok"}
+
+    # Serve React frontend
+    if os.path.isdir(FRONTEND_DIR):
+        # Serve built React assets
+        app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="assets")
+
+        # Catch-all: serve index.html for client-side routing
+        @app.get("/{full_path:path}")
+        async def serve_spa(request: Request, full_path: str):
+            # Don't catch API or asset routes
+            if full_path.startswith("api/") or full_path.startswith("static"):
+                return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+            file_path = os.path.join(FRONTEND_DIR, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    else:
+        # Fallback to old Jinja2 templates if frontend not built
+        from src.web.routes.pages import router as pages_router
+        from fastapi.templating import Jinja2Templates
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        templates_dir = os.path.join(base_dir, "templates")
+        static_dir = os.path.join(base_dir, "static")
+        if os.path.isdir(templates_dir):
+            app.state.templates = Jinja2Templates(directory=templates_dir)
+        if os.path.isdir(static_dir):
+            app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        app.include_router(pages_router, tags=["Pages"])
 
     @app.on_event("shutdown")
     def shutdown():
